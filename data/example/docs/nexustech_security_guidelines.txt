@@ -1,0 +1,59 @@
+NexusTech Solutions - Security Guidelines
+======================================
+
+Data Classification
+-----------------
+All company data must be classified according to sensitivity:
+- Public: Information that can be freely shared
+- Internal: Information for employee use only
+- Confidential: Sensitive business information
+- Restricted: Highly sensitive information (customer data, financial records, proprietary code)
+
+Password Requirements
+-------------------
+- Minimum 12 characters
+- Must include uppercase, lowercase, numbers, and special characters
+- Changed every 90 days
+- No reuse of the previous 10 passwords
+- Multi-factor authentication required for all systems
+
+Device Security
+-------------
+- Company devices must be encrypted
+- Automatic screen lock after 5 minutes of inactivity
+- Latest security patches must be installed within 72 hours
+- Antivirus software must be active and updated
+- Personal devices used for work must comply with BYOD policy
+
+Network Security
+--------------
+- Always use VPN when accessing company resources remotely
+- No connection to public WiFi without VPN
+- No sharing of network credentials
+- Regular network vulnerability scans
+- Firewall rules reviewed quarterly
+
+Incident Response
+---------------
+In the event of a security incident:
+1. Immediately report to security@nexustech.com
+2. Isolate affected systems
+3. Preserve evidence
+4. Follow the incident response team's instructions
+5. Document all actions taken
+
+Physical Security
+---------------
+- Badge access required for all office areas
+- Visitors must be escorted at all times
+- Clean desk policy enforced
+- No tailgating through secure entrances
+- Security cameras monitor all entry points
+
+Social Engineering Awareness
+--------------------------
+- Verify requestor identity before sharing sensitive information
+- Report suspicious emails to phishing@nexustech.com
+- Do not click links or open attachments from unknown senders
+- Be cautious of unusual requests, even from known contacts
+- Regular phishing simulation tests will be conducted

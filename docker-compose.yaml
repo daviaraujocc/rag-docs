@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  embedder:
+    build:
+      context: src/embedder/.
+      dockerfile: Dockerfile
+    container_name: rag-embedder
+    ports:
+      - "5000:5000"
+    environment:
+      - POSTGRES_CONNECTION_STRING=postgresql://postgres:postgres@postgres:5432/rag-docs
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_SECURE=false
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=rag-docs
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./config/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    networks:
+      - rag-network
+    restart: unless-stopped
+    command: -c 'shared_preload_libraries=vector'
+
+  minio:
+    image: minio/minio
+    container_name: rag-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+      - MINIO_NOTIFY_WEBHOOK_ENABLE_EMBEDDER=on
+      - MINIO_NOTIFY_WEBHOOK_ENDPOINT_EMBEDDER=http://rag-embedder:5000/minio-event
+    volumes:
+      - minio-data:/data
+    command: server --console-address ":9001" /data
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  retriever:
+    build:
+      context: src/retriever/.
+      dockerfile: Dockerfile
+    container_name: rag-retriever
+    ports:
+      - "5001:5001"
+    environment:
+      - POSTGRES_CONNECTION_STRING=postgresql://postgres:postgres@postgres:5432/rag-docs
+      - PORT=5001
+    depends_on:
+      - postgres
+      - minio
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  createbuckets:
+   image: minio/mc
+   container_name: rag-createbuckets
+   depends_on:
+     - minio
+     - embedder
+   entrypoint: |
+     /bin/sh -c "
+     sleep 5
+     /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin
+     /usr/bin/mc mb myminio/documents || echo 'Bucket may already exist'
+     # Add event notification for the bucket
+     echo 'Setting up event notification for documents bucket...'
+     /usr/bin/mc event add myminio/documents arn:minio:sqs::EMBEDDER:webhook --event put --suffix .pdf
+     /usr/bin/mc event add myminio/documents arn:minio:sqs::EMBEDDER:webhook --event put --suffix .txt
+     "
+   networks:
+     - rag-network
+   restart: "no"
+  # ui:
+  #   build:
+  #     context: src/ui/.
+  #     dockerfile: Dockerfile
+  #   container_name: rag-ui
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - RETRIEVER_URL=http://retriever:5001
+  #     - SIMILARITY_THRESHOLD=0.25
+  #     - LLM_PROVIDER=ollama
+  #     - OLLAMA_BASE_URL=http://ollama:11434
+  #     - OLLAMA_MODEL=llama3.1:8b
+  #   depends_on:
+  #     - retriever
+  #     - minio
+  #     - ollama
+  #   networks:
+  #     - rag-network
+  #   restart: unless-stopped
+  # ollama:
+  #   image: ollama/ollama:latest
+    
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  minio-data:

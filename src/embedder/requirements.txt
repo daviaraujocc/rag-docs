@@ -1,0 +1,21 @@
+# Flask web framework
+flask==2.3.3
+
+# Database and vector store
+sqlalchemy==2.0.27
+psycopg2-binary==2.9.9
+pgvector==0.3.6
+
+# LlamaIndex and components
+llama-index-core==0.12.22
+llama-index-embeddings-huggingface==0.5.2
+llama-index-vector-stores-postgres==0.4.2
+
+# Document processing
+pdfplumber==0.10.3
+
+# MinIO client for S3 storage
+minio==7.1.17
+
+# Production server
+gunicorn==21.2.0
