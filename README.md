@@ -31,7 +31,9 @@ Chat with your documents using AI-powered search
 
 ## About
 
-
+<div align="center">
+<img src="assets/images/rag-docs.gif" alt="demo">
+</div>
 
 RAG-DOCS is a document search engine that uses RAG (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context. 
 
@@ -78,7 +80,7 @@ flowchart TD
     
     %% UI connections
     UI --> |Retrieves documents| Retriever
-    UI --> |Accesses files via S3| MinIO
+    UI --> |Accesses/Uploads files via S3| MinIO
     UI --> |Queries for completions| Ollama
     
     %% Retriever connections
@@ -250,9 +252,9 @@ Below are the environment variables for each service that can be modified to cus
 ### Screenshots
 
 <p align="center">
-<img src="assets/images/ui-1.jpg" height="300">
-<img src="assets/images/ui-2.jpg" height="300">
-<img src="assets/images/ui-3.jpg" height="300">
+<img src="assets/images/ui-1.jpg">
+<img src="assets/images/ui-2.jpg">
+<img src="assets/images/ui-3.jpg">
 </p>
 
 ### License
