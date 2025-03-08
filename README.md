@@ -1,5 +1,5 @@
 <p align="center">
-<img src="assets/images/logo.png" height="150">
+<img src="assets/images/logo.png" height="250">
 </p>
 <h1 align="center">
 RAG-DOCS
@@ -18,14 +18,12 @@ Chat with your documents using AI-powered search
 - [Getting Started](#getting-started)
   - [Requirements](#requirements)
   - [Installation](#installation)
-  - [Configuration](#configuration)
-  - [Running the system](#running-the-system)
 
 </details>
 
 ## About
 
-RAG-DOCS is a document search engine that uses AI to provide completions for your queries. It uses the RAG (Retrieval Augmented Generation) architecture to provide completions for your queries. The system is designed to be modular and scalable.
+RAG-DOCS is a document search engine that uses RAG (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context. The system is built using a microservices architecture with components for document retrieval, document embedding, user interface, storage and language model generation.
 
 ## Stack used
 
@@ -120,7 +118,7 @@ flowchart TD
 
 - Docker
 
-### Running the system
+### Running
 
 1. Clone the repository
 
@@ -137,6 +135,8 @@ docker-compose up -d
 > Note: You need to setup the nvidia runtime for GPU support. Check the [official documentation](https://docs.docker.com/config/containers/resource_constraints/#access-an-nvidia-gpu) for more information.
 
 If you have OpenAI API key, you can use the docker-compose.openai.yaml.
+
+> Change the `OPENAI_API_KEY` in the `docker-compose.openai.yaml` file before.
 
 ```bash
 docker-compose -f docker-compose.openai.yaml up -d
