@@ -52,13 +52,12 @@ services:
       - S3_ACCESS_KEY=minioadmin
       - S3_SECRET_KEY=minioadmin
       - SIMILARITY_THRESHOLD=0.25
-      - LLM_PROVIDER=ollama
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3.1:8b # Recommended
+      - LLM_PROVIDER=openai
+      - OPENAI_BASE_URL=https://api.openai.com/v1
+      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY # change here
     depends_on:
       - retriever
       - minio
-      - ollama
     networks:
       - rag-network
     restart: unless-stopped
@@ -120,9 +119,6 @@ services:
    networks:
      - rag-network
    restart: "no"
-
-  ollama:
-    image: ollama/ollama:latest
     
 
 networks:
