@@ -1,6 +1,6 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS compile-image
 
-WORKDIR /app
+ARG EXTRA_BUILD_PACKAGES=""
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
@@ -9,21 +9,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     poppler-utils \
     tesseract-ocr \
+    ${EXTRA_BUILD_PACKAGES} \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
+COPY requirements.txt . 
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir uvicorn gunicorn
+FROM python:3.11-slim AS build-image
+COPY --from=compile-image /opt/venv /opt/venv
 
-COPY main.py /app
+ARG EXTRA_RUNTIME_PACKAGES=""
+RUN if [ -n "${EXTRA_RUNTIME_PACKAGES}" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends ${EXTRA_RUNTIME_PACKAGES} && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
 
-RUN mkdir -p /app/data
+ENV PATH="/opt/venv/bin:$PATH"
 
-ENV PYTHONPATH=/app
-ENV PORT=5000
+ARG FILES="*.py"
+COPY ${FILES} .
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "60", "main:app"]
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker","--bind", "0.0.0.0:5000", "--workers", "1", "--timeout", "90", "main:app"]

@@ -1,6 +1,8 @@
-flask==2.3.3
-llama-index-core==0.12.22
+fastapi==0.109.2
+https://download.pytorch.org/whl/cpu/torch-2.3.0%2Bcpu-cp311-cp311-linux_x86_64.whl
 sqlalchemy==2.0.27
 psycopg2-binary==2.9.9
 llama-index-embeddings-huggingface==0.5.2
 llama-index-vector-stores-postgres==0.4.2
+gunicorn==21.2.0
+uvicorn==0.27.1

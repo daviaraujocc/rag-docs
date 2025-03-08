@@ -1,15 +1,18 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import JSONResponse
+from typing import List, Dict, Optional, Any
+from pydantic import BaseModel
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core import (
     Settings,
     VectorStoreIndex,
 )
 from llama_index.vector_stores.postgres import PGVectorStore
-from sqlalchemy import make_url
+from sqlalchemy import make_url, create_engine, text
 import os
 import logging
 
-app = Flask(__name__)
+app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,8 +39,43 @@ vector_store = PGVectorStore.from_params(
 
 index = VectorStoreIndex.from_vector_store(
     vector_store,
-    embed_model=embed_model
 )
+
+def get_all_indexed_files():
+    """Retrieve all unique files from the vector store's metadata_"""
+    try:
+        engine = create_engine(postgres_conn_string)
+        with engine.connect() as connection:
+            query = text("""
+                SELECT DISTINCT 
+                    metadata_->>'filename' as filename, 
+                    metadata_->>'filepath' as filepath 
+                FROM data_llamaindex
+                WHERE metadata_->>'filename' IS NOT NULL
+                ORDER BY metadata_->>'filename'
+            """)
+            result = connection.execute(query)
+            files = [{"filename": row[0], "filepath": row[1]} for row in result]
+            return files
+    except Exception as e:
+        logging.error(f"Error fetching indexed files: {str(e)}")
+        return []
+
+def check_document_exists(filepath):
+    """Check if documents with the given filepath already exist in the vector store."""
+    try:
+        engine = create_engine(postgres_conn_string)
+        with engine.connect() as connection:
+            query = text("""
+                SELECT COUNT(*) 
+                FROM data_llamaindex
+                WHERE metadata_->>'filepath' = :filepath
+            """)
+            result = connection.execute(query, {"filepath": filepath}).scalar()
+            return result > 0
+    except Exception as e:
+        logging.error(f"Error checking for existing document: {str(e)}")
+        return False
 
 def semantic_search(query, top_k=5):
     """Perform semantic search using the vector store directly or through the index"""
@@ -54,26 +92,40 @@ def semantic_search(query, top_k=5):
         for node in nodes
     ]
 
-@app.route('/search', methods=['GET'])
-def search_handler():
+class FilesResponse(BaseModel):
+    files: List[Dict[str, str]]
+    count: int
+
+class SearchResult(BaseModel):
+    content: str
+    similarity_score: float
+    filename: str
+    filepath: str
+
+class SearchResponse(BaseModel):
+    results: List[SearchResult]
+
+@app.get('/files', response_model=FilesResponse)
+def list_files_handler():
     try:
-        query = request.args.get('query', '')
-        top_k = int(request.args.get('top_k', '5'))
-        
+        files = get_all_indexed_files()
+        return {"files": files, "count": len(files)}
+    except Exception as e:
+        logging.error(f"Files listing error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get('/search', response_model=SearchResponse)
+def search_handler(query: str = Query(..., description="Search query"), 
+                   top_k: int = Query(5, description="Number of results to return")):
+    try:
         if not query:
-            return jsonify({"error": "Missing query parameter"}), 400
+            raise HTTPException(status_code=400, detail="Missing query parameter")
         
         search_results = semantic_search(query, top_k)
         
-        return jsonify({
-            "results": search_results
-        })
+        return {"results": search_results}
         
     except Exception as e:
         logging.error(f"Search error: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-
-if __name__ == '__main__':
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 5001))
-    app.run(host=host, port=port, debug=os.getenv("DEBUG", "false").lower() == "true")
+        raise HTTPException(status_code=500, detail="Internal server error")

@@ -1,8 +1,7 @@
-FROM python:3.11-slim
+FROM python:3.11-slim AS compile-image
 
-WORKDIR /app
+ARG EXTRA_BUILD_PACKAGES=""
 
-# Install system dependencies for PDF processing and PostgreSQL
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     gcc \
@@ -10,20 +9,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     poppler-utils \
     tesseract-ocr \
+    ${EXTRA_BUILD_PACKAGES} \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 
+COPY requirements.txt . 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY llm.py /app
-COPY app.py /app
+FROM python:3.11-slim AS build-image
+COPY --from=compile-image /opt/venv /opt/venv
 
-RUN mkdir -p /app/data
+ARG EXTRA_RUNTIME_PACKAGES=""
+RUN if [ -n "${EXTRA_RUNTIME_PACKAGES}" ]; then \
+        apt-get update && \
+        apt-get install -y --no-install-recommends ${EXTRA_RUNTIME_PACKAGES} && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
 
-ENV PYTHONPATH=/app
+ENV PATH="/opt/venv/bin:$PATH"
+
+ARG FILES="*.py"
+COPY ${FILES} .
 
 EXPOSE 3000
 
-CMD ["python", "app.py"]
+CMD ["python", "main.py"]

@@ -1,5 +1,5 @@
 import os
-from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.node_parser import TokenTextSplitter
 import uuid
 import pdfplumber
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
@@ -12,7 +12,8 @@ from llama_index.core import (
 from llama_index.vector_stores.postgres import PGVectorStore
 from sqlalchemy import make_url, create_engine, text
 import logging
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import JSONResponse
 import tempfile
 from minio import Minio
 import traceback
@@ -21,7 +22,7 @@ from datetime import timedelta
 
 logging.basicConfig(level=logging.INFO)
 
-app = Flask(__name__)
+app = FastAPI()
 
 postgres_conn_string = os.getenv(
     "POSTGRES_CONNECTION_STRING", 
@@ -32,12 +33,10 @@ embed_model = HuggingFaceEmbedding(
     model_name="all-MiniLM-L6-v2"
 )
 Settings.embed_model = embed_model
-Settings.chunk_size = 1024
+Settings.chunk_size = 800
+Settings.chunk_overlap = 50
 
-text_splitter = SentenceSplitter(
-    chunk_size=1024,
-    chunk_overlap=10,
-)
+text_splitter = TokenTextSplitter()
 
 url = make_url(postgres_conn_string)
 vector_store = PGVectorStore.from_params(
@@ -78,7 +77,7 @@ def check_document_exists(filepath):
             query = text("""
                 SELECT COUNT(*) 
                 FROM data_llamaindex
-                WHERE data_llamaindex.metadata_->>'filepath' = :filepath
+                WHERE metadata_->>'filepath' = :filepath
             """)
             result = connection.execute(query, {"filepath": filepath}).scalar()
             return result > 0
@@ -143,16 +142,19 @@ def process_file(file_path, original_filename=None, original_filepath=None):
         logging.error(f"Error processing file {file_path}: {str(e)}")
         raise
 
-@app.route('/minio-event', methods=['POST'])
-def handle_minio_event():
+@app.post('/minio-event')
+async def handle_minio_event(request: Request):
     """Handle MinIO bucket notification events"""
     try:
-        event_data = request.json
-        app.logger.info(f"Received MinIO event: {event_data}")
+        event_data = await request.json()
+        logging.info(f"Received MinIO event: {event_data}")
         
         records = event_data.get('Records', [])
         if not records:
-            return jsonify({"status": "error", "message": "No records in event"}), 400
+            return JSONResponse(
+                content={"status": "error", "message": "No records in event"},
+                status_code=400
+            )
         
         results = []
         for record in records:
@@ -162,27 +164,27 @@ def handle_minio_event():
             event_name = record.get('eventName', '')
             
             if not (bucket_name and object_key):
-                app.logger.error(f"Invalid event data: missing bucket or object info")
+                logging.error(f"Invalid event data: missing bucket or object info")
                 continue
             
             if not event_name.startswith('s3:ObjectCreated:'):
-                app.logger.info(f"Skipping event type: {event_name}")
+                logging.info(f"Skipping event type: {event_name}")
                 continue
             
-            app.logger.info(f"Processing file {object_key} from bucket {bucket_name}")
+            logging.info(f"Processing file {object_key} from bucket {bucket_name}")
             result = process_file_from_minio(bucket_name, object_key)
             results.append(result)
         
-        return jsonify({
+        return {
             "status": "success", 
             "message": f"Processed {len(results)} files",
             "results": results
-        }), 200
+        }
             
     except Exception as e:
-        app.logger.error(f"Error processing MinIO event: {str(e)}")
-        app.logger.error(traceback.format_exc())
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logging.error(f"Error processing MinIO event: {str(e)}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=str(e))
 
 def process_file_from_minio(bucket_name, object_key):
     """Download a file from MinIO and process it with the vectorizer"""
@@ -223,8 +225,3 @@ def process_file_from_minio(bucket_name, object_key):
             "status": "error", 
             "error": str(e)
         }
-
-if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    host = os.getenv("HOST", "0.0.0.0")
-    app.run(host=host, port=port, debug=os.getenv("DEBUG", "false").lower() == "true")
