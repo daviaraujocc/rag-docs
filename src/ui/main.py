@@ -377,7 +377,7 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
             with gr.TabItem("Upload Documents", elem_classes="upload-container"):
                 gr.Markdown("""
                 ## Upload Documents
-                Upload documents to be indexed and made searchable. Supported formats include PDF, DOCX, and images.
+                Upload documents to be indexed and made searchable. Supported formats include PDF and TXT.
                 """)
                 
                 upload_input = gr.Files(label="Upload Files", file_count="multiple")
