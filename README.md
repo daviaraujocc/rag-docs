@@ -8,7 +8,10 @@ RAG-DOCS
 Chat with your documents using AI-powered search 
 </p>
 <p align="center">
-<a href="https://github.com/daviaraujocc/rag-docs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/daviaraujocc/rag-docs?color=blue" alt="License"></a>
+<img src="https://img.shields.io/badge/License-MIT-green
+" alt="License"></a>
+// last tag
+<img src="https://img.shields.io/github/v/tag/daviaraujocc/rag-docs">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker Ready">
 <img src="https://img.shields.io/badge/Kubernetes-Ready-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
@@ -141,7 +144,13 @@ flowchart TD
 
 ## Getting Started
 
-### Requirements
+### Hardware requirements
+
+- 4 CPU
+- 8 GB RAM
+- Compatible GPU with >8GB VRAM for better performance
+
+### Requirements 
 
 - Docker
 
@@ -167,7 +176,18 @@ docker-compose up -d --build
 
 If you prefer to use OpenAI instead of local Ollama models:
 
-1. Edit docker-compose.openai.yaml and set your API key
+1. Edit `docker-compose.openai.yaml` and set your API key on UI service.
+
+```yaml
+
+ui:
+   environment:
+      LLM_PROVIDER: "openai"
+      OPENAI_API_BASE: "https://api.openai.com/v1/"
+      OPENAI_API_KEY: "your-api-key # change here
+```
+
+
 2. Launch with:
    ```bash
    docker-compose -f docker-compose.openai.yaml up -d --build
@@ -179,9 +199,35 @@ If you prefer to use OpenAI instead of local Ollama models:
 2. Start a chat session
 3. Ask questions and interact with the system
 
+#### Ollama Models
+
+If using OLLAMA local models, before starting a chat session, you need to make sure that the model is available in the Ollama service. You can check the available models by running this command:
+
+```bash
+curl http://localhost:11434/api/tags -s 
+| jq .models[].name
+```
+
+If you don't see the model you want to use, you have to pull it, and there's two options.
+
+1. Pull the model using the Ollama API:
+
+```bash
+curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'
+```
+
+2. Using RAG-DOCS UI interface:
+
+- Go to the System Status tab
+- Click on "Download Model" button
+
+> In this example we are using llama3.1:8b model which requires around 8GB of VRAM. You can choose a smaller model if you have memory constraints.
+
 ### 🚧 Kubernetes Deployment (WIP) 🚧
 
 Deployment with helm charts soon.
+
+helm install rag-docs helm/rag-docs
 
 ### Environment Variables
 
