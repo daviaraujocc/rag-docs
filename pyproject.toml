@@ -1,0 +1,14 @@
+[tool.commitizen]
+name = "cz_emoji"
+version = "0.0.1"
+tag_format = "$version"
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
