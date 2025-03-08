@@ -129,3 +129,7 @@ def search_handler(query: str = Query(..., description="Search query"),
     except Exception as e:
         logging.error(f"Search error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+    
+@app.get('/health', response_class=JSONResponse)
+def health_check():
+    return JSONResponse(content={"status": "ok"})

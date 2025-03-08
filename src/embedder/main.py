@@ -225,3 +225,7 @@ def process_file_from_minio(bucket_name, object_key):
             "status": "error", 
             "error": str(e)
         }
+    
+@app.get('/health', response_class=JSONResponse)
+def health_check():
+    return JSONResponse(content={"status": "ok"})
