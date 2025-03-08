@@ -8,9 +8,7 @@ RAG-DOCS
 Chat with your documents using AI-powered search 
 </p>
 <p align="center">
-<img src="https://img.shields.io/badge/License-MIT-green
-" alt="License"></a>
-// last tag
+<img src="https://img.shields.io/badge/License-MIT-green" alt="License"></a>
 <img src="https://img.shields.io/github/v/tag/daviaraujocc/rag-docs">
 <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" alt="Python">
 <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker Ready">
