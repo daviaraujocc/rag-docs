@@ -4,34 +4,38 @@ import tempfile
 import boto3
 from botocore.client import Config
 import logging
-from llm import create_llm
+from llm import create_llm, check_ollama_model, download_ollama_model
 import requests
 import json
 import mimetypes
 import pandas as pd
 from datetime import datetime
 import re
+import threading
+import config
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize LLM client for response generation
-llm = create_llm()
+llm_provider = config.LLM_PROVIDER
+ollama_base_url = config.OLLAMA_BASE_URL
+ollama_model = config.OLLAMA_MODEL
 
-# Initialize MinIO client
+llm = None
+model_download_in_progress = False
+
 minio_client = boto3.client(
     's3',
-    endpoint_url=os.getenv("S3_ENDPOINT", "http://localhost:9000"),
-    aws_access_key_id=os.getenv("S3_ACCESS_KEY", "minioadmin"),
-    aws_secret_access_key=os.getenv("S3_SECRET_KEY", "minioadmin")
+    endpoint_url=config.S3_ENDPOINT,
+    aws_access_key_id=config.S3_ACCESS_KEY,
+    aws_secret_access_key=config.S3_SECRET_KEY
 )
 
-S3_PUBLIC_URL = os.getenv("S3_PUBLIC_URL", "http://localhost:9000")
-RETRIEVER_API_URL = os.getenv("RETRIEVER_API_URL", "http://localhost:5001")
-BUCKET_NAME = os.getenv("MINIO_BUCKET", "documents")
-SIMILARITY_THRESHOLD = os.getenv("SIMILARITY_THRESHOLD", 0.25)
-PRESIGNED_URL_EXPIRATION = int(os.getenv("PRESIGNED_URL_EXPIRATION", 3600))  # 1 hour default
+S3_PUBLIC_URL = config.S3_PUBLIC_URL
+RETRIEVER_API_URL = config.RETRIEVER_API_URL
+BUCKET_NAME = config.MINIO_BUCKET
+SIMILARITY_THRESHOLD = config.SIMILARITY_THRESHOLD
+PRESIGNED_URL_EXPIRATION = config.PRESIGNED_URL_EXPIRATION
 
 try:
     if not minio_client.head_bucket(Bucket=BUCKET_NAME):
@@ -39,17 +43,9 @@ try:
 except Exception:
     minio_client.create_bucket(Bucket=BUCKET_NAME)
 
-VIEWABLE_MIMETYPES = [
-    'text/plain', 'text/html', 'text/css', 'text/javascript',
-    'application/pdf', 'image/jpeg', 'image/png', 'image/gif',
-    'image/svg+xml'
-]
+VIEWABLE_MIMETYPES = config.VIEWABLE_MIMETYPES
 
 def get_presigned_url(filename):
-    """
-    Generate a presigned URL for accessing a document in MinIO,
-    configured for browser viewing when possible
-    """
     try:
         content_type, _ = mimetypes.guess_type(filename)
         if not content_type:
@@ -74,7 +70,7 @@ def get_presigned_url(filename):
             ExpiresIn=PRESIGNED_URL_EXPIRATION
         )
 
-        presigned_url = presigned_url.replace(os.getenv("S3_ENDPOINT", "http://localhost:9000"), S3_PUBLIC_URL)
+        presigned_url = presigned_url.replace(config.S3_ENDPOINT, S3_PUBLIC_URL)
         
         return presigned_url, viewable
         
@@ -83,7 +79,6 @@ def get_presigned_url(filename):
         return None, False
 
 def upload_file(files):
-    """Handle file upload to MinIO but let retriever API handle indexing later"""
     if not files:
         return "No files were uploaded."
     
@@ -97,7 +92,7 @@ def upload_file(files):
                 
                 temp_path = os.path.join(temp_dir, file_name)
                 
-                if hasattr(file, 'read'):  # File-like object
+                if hasattr(file, 'read'):
                     with open(temp_path, 'wb') as f:
                         content = file.read()
                         if isinstance(content, str):
@@ -123,9 +118,6 @@ def upload_file(files):
     return "\n".join(results)
 
 def get_indexed_files():
-    """
-    Fetch the list of indexed files from the retriever API and format for display
-    """
     try:
         response = requests.get(f"{RETRIEVER_API_URL}/files")
         
@@ -176,9 +168,7 @@ def get_indexed_files():
         })
         return df, 0
 
-# Add a new function to filter files based on search term
 def filter_files(search_term, df):
-    """Filter the files DataFrame based on search term"""
     if not search_term or df.empty or "Error" in df.columns:
         return df
     
@@ -192,11 +182,155 @@ def filter_files(search_term, df):
     
     return filtered_df
 
+model_download_status = "Not started"
+model_download_percentage = 0
+
+def check_model_availability():
+    if llm_provider != "ollama":
+        return True
+    
+    return check_ollama_model(ollama_base_url, ollama_model)
+
+def get_model_status():
+    global llm, model_download_in_progress, model_download_status, model_download_percentage
+    
+    if llm is None and check_model_availability():
+        llm = create_llm()
+        logger.info("LLM initialized")
+    
+    status = {
+        "provider": llm_provider.capitalize(),
+        "model": config.OPENAI_MODEL if llm_provider == "openai" else config.OLLAMA_MODEL,
+        "download_in_progress": model_download_in_progress,
+        "download_status": model_download_status,
+        "download_percentage": model_download_percentage,
+        "download_needed": False,
+        "status": "Available" if llm is not None else "Available (not initialized)" 
+    }
+    
+    if llm_provider == "openai":
+        return status
+    
+    if llm is None and not check_model_availability():
+        status.update({
+            "status": "Not available",
+            "download_needed": True
+        })
+    
+    return status
+
+def update_status(full_update=False):
+    status = get_model_status()
+    
+    status_message = "## LLM Status\n\n"
+    status_message += f"**Provider:** {status['provider']}\n\n"
+    status_message += f"**Model:** {status['model']}\n\n"
+    
+    status_style = "green" if "Available" in status['status'] else "red"
+    status_message += f"**Status:** <span style='color: {status_style}; font-weight: bold;'>{status['status']}</span>\n\n"
+    
+    if status['download_in_progress']:
+        status_message += f"**Download Progress:** {status['download_percentage']}%\n\n"
+        status_message += f"**Status:** {status['download_status']}\n\n"
+    elif status['download_needed']:
+        status_message += "**Download Status:** Required but not started. Click the 'Download Model' button below.\n\n"
+    
+    download_button_visibility = status['download_needed'] and not status['download_in_progress']
+    
+    if not full_update:
+        return status_message, gr.update(visible=download_button_visibility)
+    
+    env_vars = get_environment_variables()
+    
+    return (
+        status_message, 
+        env_vars["LLM Configuration"],
+        env_vars["Storage Configuration"],
+        env_vars["Retriever Configuration"],
+        gr.update(visible=download_button_visibility)
+    )
+
+def start_model_download():
+    global llm, model_download_in_progress, model_download_status, model_download_percentage
+    
+    if model_download_in_progress:
+        return "Download already in progress", False
+        
+    model_download_in_progress = True
+    model_download_status = "Starting download..."
+    model_download_percentage = 0
+    
+    def download_thread_func():
+        global llm, model_download_in_progress, model_download_status, model_download_percentage
+        try:
+            status_messages = {
+                "starting": "Initializing download...",
+                "downloading": "Downloading: {progress}% complete",
+                "completed": "Download complete!",
+                "error": "Download failed!"
+            }
+            
+            def progress_callback(progress_data):
+                global model_download_percentage, model_download_status
+                status = progress_data.get("status", "")
+                progress = progress_data.get("progress", 0)
+                model_download_percentage = progress
+                
+                message = status_messages.get(status, "")
+                if status == "downloading":
+                    message = message.format(progress=progress)
+                if message:
+                    model_download_status = message
+            
+            success, message = download_ollama_model(
+                ollama_base_url, 
+                ollama_model,
+                progress_callback=progress_callback
+            )
+            
+            if success:
+                llm = create_llm()
+                model_download_status = "Completed"
+                model_download_percentage = 100
+                logger.info(f"Model download completed: {message}")
+            else:
+                model_download_status = "Failed"
+                logger.error(f"Model download failed: {message}")
+        finally:
+            model_download_in_progress = False
+    
+    download_thread = threading.Thread(target=download_thread_func)
+    download_thread.daemon = True
+    download_thread.start()
+    
+    return "Download started", False
+
+def get_environment_variables():
+    env_vars = config.get_env_vars_by_category()
+
+    result = {}
+    
+    for category, variables in env_vars.items():
+        category_content = []
+        for key, value in variables.items():
+            if "KEY" in key and value:
+                masked_value = value[:4] + "*" * (len(value) - 8) + value[-4:] if len(value) > 8 else "***" 
+                category_content.append(f"- **{key}**: {masked_value}")
+            else:
+                category_content.append(f"- **{key}**: {value}")
+        
+        result[category] = f"<details>\n<summary>## {category}</summary>\n\n" + "\n".join(category_content) + "\n</details>"
+
+    return result
+
 def chatbot_response(message, history):
-    """
-    Get contexts from retriever API but generate response locally
-    Properly formatted for Gradio chatbot
-    """
+    global llm, model_download_in_progress
+    
+    if llm is None:
+        if not check_model_availability():
+            return "⚠️ The required model is not available. Please go to the **System Settings** tab and click the **Download Model** button to download it before chatting."
+        llm = create_llm()
+    
     try:
         response = requests.get(
             f"{RETRIEVER_API_URL}/search",
@@ -218,7 +352,6 @@ def chatbot_response(message, history):
                 if "filename" in result and result["filename"]:
                     filename = result['filename']
                     
-                    # Generate presigned URL for this document
                     presigned_url, viewable = get_presigned_url(filename)
                     
                     if presigned_url:
@@ -257,6 +390,8 @@ def chatbot_response(message, history):
             
     except Exception as e:
         logger.error(f"Error calling retriever API: {str(e)}")
+        if llm is None:
+            return "The system is still preparing the AI model. Please try again in a few minutes."
         direct_response = llm.complete(f"Question: {message}\n\nAnswer:").text
         return f"{direct_response}\n\n(Note: This response was generated without document context as the retrieval service is unavailable.)"
 
@@ -271,7 +406,6 @@ function refresh() {
 }
 """
 
-# Create Gradio interface
 with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
     .container { max-width: 1200px; margin: auto; }
     .title-container { text-align: center; margin-bottom: 20px; }
@@ -287,7 +421,6 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
     th { background-color: #3498db; color: white; text-align: left; padding: 10px; }
     td { padding: 8px; border-bottom: 1px solid #ddd; }
     
-    /* Enhanced table layout and scroll control */
     .container-df {
         overflow-x: hidden !important; 
         overflow-y: auto !important;
@@ -296,20 +429,53 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
         overflow-x: hidden !important;
         overflow-y: auto !important;
     }
-    /* Fixed layout to prevent horizontal expansion */
     .container-df table {
         table-layout: fixed;
         width: 100%;
     }
-    /* Ensure text wraps inside cells */
     .container-df td {
         word-wrap: break-word;
         overflow-wrap: break-word;
         white-space: normal;
     }
-    /* Hide horizontal scrollbar in all nested elements */
     .container-df ::-webkit-scrollbar:horizontal {
         display: none;
+    }
+    
+    .status-container {
+        padding: 15px;
+        border-radius: 10px;
+    }
+    .status-header {
+        margin-bottom: 20px;
+    }
+    .model-status {
+        font-size: 1.1em;
+    }
+    .download-progress {
+        margin: 10px 0;
+    }
+    
+    .download-button-container {
+        text-align: left;
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
+    
+    details {
+        margin: 10px 0;
+        padding: 10px;
+        background-color: rgba(0,0,0,0.03);
+        border-radius: 5px;
+    }
+    details summary {
+        cursor: pointer;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    details summary h2 {
+        display: inline;
+        font-size: 1.3em;
     }
 """) as app:
     with gr.Column(elem_classes="container"):
@@ -337,15 +503,11 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
                 clear = gr.Button("Clear Chat", variant="secondary")
                 
                 def user_input(user_message, history):
-                    # Append user message to history
                     return "", history + [[user_message, None]]
                 
                 def bot_response(history):
-                    # Get the last user message
                     user_message = history[-1][0]
-                    # Get response from chatbot
                     bot_message = chatbot_response(user_message, history[:-1])
-                    # Update history
                     history[-1][1] = bot_message
                     return history
                 
@@ -360,7 +522,6 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
                     [chatbot]
                 )
                 
-                # Connect the send button to the same flow
                 send_btn.click(
                     user_input,
                     [msg, chatbot],
@@ -396,33 +557,29 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
                 View the list of files that have been indexed and are available for searching.
                 """)
                 
-                # Get initial data
                 initial_df, initial_count = get_indexed_files()
                 
-                # Display file count
                 file_count = gr.Markdown(
                     f"**Total Files Indexed: {initial_count}**", 
                     elem_classes="file-stats"
                 )
                 
-                # Modified search functionality (removed search button)
                 with gr.Row(elem_classes="search-row"):
                     search_box = gr.Textbox(
                         label="Search Files",
                         placeholder="Type to search by filename, location, or type...",
                         show_label=False,
-                        scale=9  # Adjusted scale to take more space
+                        scale=9
                     )
                     clear_search_btn = gr.Button("✖ Clear", scale=1)
                 
-                # Display files in a DataFrame with improved styling
                 files_table = gr.DataFrame(
                     value=initial_df,
                     interactive=False,
                     height=350,
                     wrap=True,
                     column_widths=["60%", "25%", "15%"],
-                    elem_classes="container-df"  # Added class for CSS targeting
+                    elem_classes="container-df"
                 )
                 
                 with gr.Row(elem_classes="refresh-btn"):
@@ -430,7 +587,7 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
                 
                 def update_files_display():
                     df, count = get_indexed_files()
-                    return df, f"**Total Files Indexed: {count}**", ""  # Clear search box
+                    return df, f"**Total Files Indexed: {count}**", ""
                 
                 def search_files(search_term):
                     df, _ = get_indexed_files()
@@ -439,29 +596,87 @@ with gr.Blocks(title="RAG Docs Assistant", js=js_func, theme="soft", css="""
                 
                 def clear_search():
                     df, _ = get_indexed_files()
-                    return df, ""  # Return full list and clear search box
+                    return df, ""
                 
-                # Connect refresh button
                 refresh_btn.click(
                     update_files_display,
                     inputs=None,
                     outputs=[files_table, file_count, search_box]
                 )
                 
-                # Remove search button connection, keep only the search box change event
                 search_box.change(
                     search_files,
                     inputs=search_box,
                     outputs=files_table
                 )
                 
-                # Connect clear search button
                 clear_search_btn.click(
                     clear_search,
                     inputs=None,
                     outputs=[files_table, search_box]
                 )
+            
+            with gr.TabItem("System Settings", elem_classes="status-container", visible=True): 
+                with gr.Column(elem_classes="status-header"):
+                    gr.Markdown("## System Settings")
+            
+                
+                with gr.Column(elem_classes="status-section"):
+                    model_status_text = gr.Markdown("Loading status...", elem_classes="model-status")
+                    
+                    with gr.Row(elem_classes="download-button-container"):
+                        download_btn = gr.Button("⬇️ Download Model", variant="primary", size="sm", visible=False, scale=0)
+                        refresh_status_btn = gr.Button("🔄 Refresh Status", variant="primary", size="sm", scale=0)
+                        gr.Column(scale=1)
+                       
 
-# Launch the app
+                gr.Markdown("---")
+                
+                with gr.Column(elem_classes="config-section"):
+                    llm_config_text = gr.Markdown("", elem_classes="llm-config")
+                    
+                    storage_config_text = gr.Markdown("", elem_classes="storage-config")
+                    
+                    retriever_config_text = gr.Markdown("", elem_classes="retriever-config")
+                
+                gr.Markdown("---")
+
+                refresh_status_btn.click(
+                    lambda: update_status(False),
+                    inputs=[],
+                    outputs=[
+                        model_status_text,
+                        download_btn
+                    ]
+                )
+                
+                download_btn.click(
+                    start_model_download,
+                    inputs=[],
+                    outputs=[model_status_text, download_btn]
+                ).then(
+                    lambda: update_status(True),
+                    inputs=[],
+                    outputs=[
+                        model_status_text,
+                        llm_config_text,
+                        storage_config_text,
+                        retriever_config_text,
+                        download_btn
+                    ]
+                )
+                
+                app.load(
+                    lambda: update_status(True),
+                    inputs=[],
+                    outputs=[
+                        model_status_text,
+                        llm_config_text,
+                        storage_config_text,
+                        retriever_config_text,
+                        download_btn
+                    ]
+                )
+
 if __name__ == "__main__":
-    app.launch(server_name="0.0.0.0", server_port=3000)
+    app.launch(server_name=config.SERVER_HOST, server_port=config.SERVER_PORT)
