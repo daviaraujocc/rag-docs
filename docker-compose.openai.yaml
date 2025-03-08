@@ -53,16 +53,14 @@ services:
       - S3_SECRET_KEY=minioadmin
       - SIMILARITY_THRESHOLD=0.25
       - LLM_PROVIDER=openai
-      - OPENAI_BASE_URL=https://api.openai.com/v1
-      - OPENAI_API_KEY=YOUR_OPENAI_API_KEY # change here
+      - OPENAI_API_BASE=https://api.openai.com/v1/
+      - OPENAI_API_KEY=YOUR-KEY-HERE # change here
     depends_on:
       - retriever
       - minio
     networks:
       - rag-network
     restart: unless-stopped
-    #extra_hosts:
-    #  - "host.docker.internal:host-gateway"
 
   postgres:
     image: pgvector/pgvector:pg16
@@ -91,7 +89,6 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
       - MINIO_NOTIFY_WEBHOOK_ENABLE_EMBEDDER=on
-      - MINIO_SERVER_URL=
       - MINIO_NOTIFY_WEBHOOK_ENDPOINT_EMBEDDER=http://embedder:5000/minio-event
     volumes:
       - minio-data:/data

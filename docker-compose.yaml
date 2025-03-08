@@ -92,7 +92,6 @@ services:
       - MINIO_ROOT_USER=minioadmin
       - MINIO_ROOT_PASSWORD=minioadmin
       - MINIO_NOTIFY_WEBHOOK_ENABLE_EMBEDDER=on
-      - MINIO_SERVER_URL=
       - MINIO_NOTIFY_WEBHOOK_ENDPOINT_EMBEDDER=http://embedder:5000/minio-event
     volumes:
       - minio-data:/data
