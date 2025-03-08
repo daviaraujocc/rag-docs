@@ -6,7 +6,13 @@ RAG-DOCS
 </h1>
 <p align="center">
 Chat with your documents using AI-powered search 
-<p>
+</p>
+<p align="center">
+<a href="https://github.com/daviaraujocc/rag-docs/blob/main/LICENSE"><img src="https://img.shields.io/github/license/daviaraujocc/rag-docs?color=blue" alt="License"></a>
+<img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" alt="Python">
+<img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white" alt="Docker Ready">
+<img src="https://img.shields.io/badge/Kubernetes-Ready-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
+</p>
 
 # Table of content
 
@@ -14,6 +20,8 @@ Chat with your documents using AI-powered search
 <summary>Expand contents</summary>
 
 - [About](#about)
+  - [Features](#features)
+  - [Technology Stack](#technology-stack)
 - [Architecture](#architecture)
 - [Getting Started](#getting-started)
   - [Requirements](#requirements)
@@ -23,17 +31,34 @@ Chat with your documents using AI-powered search
 
 ## About
 
-RAG-DOCS is a document search engine that uses RAG (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context. The system is built using a microservices architecture with components for document retrieval, document embedding, user interface, storage and language model generation.
 
-## Stack used
 
-- [Gradio](https://www.gradio.app/) - Provides the user interface for chat interactions and document uploading
-- [MinIO](https://min.io/) - Object storage for document files and management of document persistence
-- [Postgres](https://www.postgresql.org/) - Database with vector extension to store and query document embeddings
-- [FastAPI](https://fastapi.tiangolo.com/) - Backend framework for the retriever and embedder microservices
-- [LlamaIndex](https://www.llamaindex.ai/) - Framework for connecting LLMs with external data through indexing
-- [Ollama LLM](https://ollama.com/) - Local large language model provider for generating responses
-- [OpenAI](https://openai.com/) - Alternative cloud-based language model provider for text generation and embeddings
+RAG-DOCS is a document search engine that uses RAG (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context. 
+
+### Features
+
+- **Document Management**: Upload TXT and PDF files through a clean Gradio interface
+- **Vector Search**: Intelligent document retrieval using pgvector similarity search
+- **AI-powered Chat**: Interact with your documents using LLMs
+- **Multiple LLM Options**: Use either local Ollama models or OpenAI API
+- **Microservices Architecture**: Scalable design with separate components for each task
+- **Containerized Deployment**: Ready for Docker and Kubernetes environments
+
+### Technology Stack
+
+<p align="center">
+<img src="https://img.shields.io/badge/Gradio-FF6F00?logo=gradio&logoColor=white" alt="Gradio">
+<img src="https://img.shields.io/badge/MinIO-C72E49?logo=minio&logoColor=white" alt="MinIO">
+<img src="https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white" alt="PostgreSQL">
+<img src="https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white" alt="FastAPI">
+<img src="https://img.shields.io/badge/LlamaIndex-8A2BE2?logoColor=white" alt="LlamaIndex">
+<img src="https://img.shields.io/badge/Ollama-000000?logoColor=white" alt="Ollama">
+<img src="https://img.shields.io/badge/OpenAI-412991?logo=openai&logoColor=white" alt="OpenAI">
+<img src="https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white" alt="Docker">
+<img src="https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes">
+<img src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white" alt="Python">
+<img src="https://img.shields.io/badge/Helm-0F1689?logo=helm&logoColor=white" alt="Helm">
+</p>
 
 ## Architecture
 
@@ -129,17 +154,116 @@ git clone https://github.com/daviaraujocc/rag-docs && cd rag-docs
 2. Start the system
 
 ```bash
-docker-compose up -d
+docker-compose up -d --build
 ```
 
 > Note: You need to setup the nvidia runtime for GPU support. Check the [official documentation](https://docs.docker.com/config/containers/resource_constraints/#access-an-nvidia-gpu) for more information.
 
-If you have OpenAI API key, you can use the docker-compose.openai.yaml.
-
-> Change the `OPENAI_API_KEY` in the `docker-compose.openai.yaml` file before.
-
-```bash
-docker-compose -f docker-compose.openai.yaml up -d
-```
-
 3. Access the UI at [http://localhost:3000](http://localhost:3000)
+
+#### OpenAI Option
+
+If you prefer to use OpenAI instead of local Ollama models:
+
+1. Edit docker-compose.openai.yaml and set your API key
+2. Launch with:
+   ```bash
+   docker-compose -f docker-compose.openai.yaml up -d --build
+   ```
+
+### How to use
+
+1. Upload a document (TXT or PDF)
+2. Start a chat session
+3. Ask questions and interact with the system
+
+### 🚧 Kubernetes Deployment (WIP) 🚧
+
+Deployment with helm charts soon.
+
+### Environment Variables
+
+Below are the environment variables for each service that can be modified to customize your deployment.
+
+#### Embedder Service
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `POSTGRES_CONNECTION_STRING` | PostgreSQL connection string | `postgresql://postgres:postgres@postgres:5432/rag-docs` |
+| `MINIO_ENDPOINT` | MinIO server endpoint | `minio:9000` |
+| `MINIO_ACCESS_KEY` | MinIO access key | `minioadmin` |
+| `MINIO_SECRET_KEY` | MinIO secret key | `minioadmin` |
+| `MINIO_SECURE` | Use HTTPS for MinIO connection | `false` |
+
+#### Retriever Service
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `POSTGRES_CONNECTION_STRING` | PostgreSQL connection string | `postgresql://postgres:postgres@postgres:5432/rag-docs` |
+| `PORT` | Port for the Retriever service | `6000` |
+
+#### UI Service
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `RETRIEVER_API_URL` | URL for the Retriever service | `http://retriever:6000` |
+| `S3_ENDPOINT` | MinIO server endpoint | `http://minio:9000` |
+| `S3_PUBLIC_URL` | Public URL for accessing MinIO | `http://localhost:9000` |
+| `S3_ACCESS_KEY` | MinIO access key | `minioadmin` |
+| `S3_SECRET_KEY` | MinIO secret key | `minioadmin` |
+| `SIMILARITY_THRESHOLD` | Threshold for similarity search | `0.25` |
+
+##### Ollama Configuration (Default)
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `LLM_PROVIDER` | LLM provider | `ollama` |
+| `OLLAMA_BASE_URL` | Base URL for Ollama service | `http://ollama:11434` |
+| `OLLAMA_MODEL` | Ollama model to use | `llama3.1:8b` |
+
+##### OpenAI Configuration (Alternative)
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `LLM_PROVIDER` | LLM provider | `openai` |
+| `OPENAI_API_BASE` | OpenAI API base URL | `https://api.openai.com/v1/` |
+| `OPENAI_API_KEY` | OpenAI API key | You must provide this |
+| `OPENAI_MODEL` | OpenAI model to use | `gpt-3.5-turbo` |
+
+#### PostgreSQL Service
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `POSTGRES_USER` | PostgreSQL username | `postgres` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `postgres` |
+| `POSTGRES_DB` | PostgreSQL database name | `rag-docs` |
+
+#### MinIO Service
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `MINIO_ROOT_USER` | MinIO root username | `minioadmin` |
+| `MINIO_ROOT_PASSWORD` | MinIO root password | `minioadmin` |
+| `MINIO_NOTIFY_WEBHOOK_ENABLE_EMBEDDER` | Enable webhook for Embedder | `on` |
+| `MINIO_NOTIFY_WEBHOOK_ENDPOINT_EMBEDDER` | Webhook endpoint URL | `http://embedder:5000/minio-event` |
+
+### Screenshots
+
+<p align="center">
+<img src="assets/images/ui-1.jpg" height="300">
+<img src="assets/images/ui-2.jpg" height="300">
+<img src="assets/images/ui-3.jpg" height="300">
+</p>
+
+### License
+
+This project is available under the [MIT License](https://github.com/daviaraujocc/rag-docs/blob/main/LICENSE).
+
+
+### TODO
+
+- [ ] Add Helm charts for Kubernetes deployment
+- [ ] Implement caching for faster responses
+- [ ] Add support for more document formats
+- [ ] Improve UI with more features
+- [ ] Implement metrics and monitoring
