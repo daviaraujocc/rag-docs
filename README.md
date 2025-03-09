@@ -144,12 +144,19 @@ flowchart TD
 
 ### Hardware requirements
 
-- 4 CPU
-- 8 GB RAM
-- Compatible GPU with >8GB VRAM for better performance
+- Minimum:
+   - 2 CPU
+   - 4 GB RAM
 
-### Requirements 
+- Recommended:
+   - A GPU with >6GB VRAM for better performance
 
+
+### Pre-requisites
+
+Before you begin, make sure you have:
+
+- Git
 - Docker
 
 ### Running
@@ -170,11 +177,13 @@ docker-compose up -d --build
 
 3. Access the UI at [http://localhost:3000](http://localhost:3000)
 
-#### OpenAI Option
+#### Using OpenAI as an Alternative
 
-If you prefer to use OpenAI instead of local Ollama models:
+If you prefer using OpenAI instead of local Ollama models, follow these steps:
 
-1. Edit `docker-compose.openai.yaml` and set your API key on UI service.
+##### 1. Configure OpenAI API
+
+Edit the `docker-compose.openai.yaml` file to set your API key:
 
 ```yaml
 
@@ -186,37 +195,42 @@ ui:
 ```
 
 
-2. Launch with:
-   ```bash
-   docker-compose -f docker-compose.openai.yaml up -d --build
-   ```
+##### 2. Launch with OpenAI
 
-### How to use
+Start the system using the OpenAI configuration:
 
-1. Upload a document (TXT or PDF)
-2. Start a chat session
-3. Ask questions and interact with the system
+```bash
+docker-compose -f docker-compose.openai.yaml up -d --build
+```
 
-#### Ollama Models
+### Interacting with RAG-DOCS
 
-If using OLLAMA local models, before starting a chat session, you need to make sure that the model is available in the Ollama service. You can check the available models by running this command:
+1. **Upload a Document**: Use the UI to upload your TXT or PDF file.
+2. **Start a Chat Session**: Initiate a chat to query the content of your document.
+3. **Ask Questions**: Interact with your document by asking questions.
+
+#### Managing Ollama Models
+
+If you’re using local Ollama models, ensure the required model is available:
+
+##### 1. Check Available Models
 
 ```bash
 curl http://localhost:11434/api/tags -s | jq .models[].name
 ```
+> Tip: The command uses jq for JSON parsing. If you don’t have it installed, please install it first.
 
-If you don't see the model you want to use, you have to pull it, and there's two options.
+##### 2. Pull a Model if Needed
 
-1. Pull the model using the Ollama API:
+- Via API:
 
 ```bash
 curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'
 ```
 
-2. Using RAG-DOCS UI interface:
-
-- Go to the System Status tab
-- Click on "Download Model" button
+- Via UI:
+   - Go to the System Status tab
+   - Click on "Download Model" button
 
 > In this example we are using llama3.1:8b model which requires around 8GB of VRAM. You can choose a smaller model if you have memory constraints.
 
@@ -225,6 +239,10 @@ curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'
 For Kubernetes deployment, check the [documentation](charts/rag-docs/README.md).
 
 You can use values present in `helm` for your deployment.
+
+For deploying on Kubernetes:
+- Refer to the [Kubernetes Deployment Guide](charts/rag-docs/README.md) using Helm for detailed instructions.
+- Customize your deployment using the values provided in the helm directory.
 
 ### Environment Variables
 
@@ -300,6 +318,32 @@ Below are the environment variables for each service that can be modified to cus
 <img src="assets/images/ui-3.jpg">
 </p>
 
+### Troubleshooting and FAQs
+
+1. **GPU Support**: Verify that the NVIDIA Docker runtime is correctly configured. Check the [official documentation](https://docs.docker.com/config/containers/resource_constraints/#access-an-nvidia-gpu) for more information.
+
+2. **Model Download**: If you encounter issues with model download, check the Ollama service logs for more information.
+
+3. **Critical TIMEOUT errors on both embedder and retriever services**: This can happen if the hardware requirements are not met, altho if you wait a bit the services should start working.
+
+4. **Connection Issues**: If you're unable to connect to services, verify these ports are accessible:
+   - UI Service: 3000
+   - Retriever Service: 6000
+   - Embedder Service: 5000
+   - PostgreSQL: 5432
+   - MinIO: 9000 (API)
+   - Ollama: 11434
+
+5. **Performance Issues**: 
+   - If the system is slow or unresponsive, ensure your hardware meets at least the minimum requirements (2 CPU cores, 4GB RAM)
+   - For smoother performance with larger documents or multiple queries, consider upgrading to the recommended specs (including GPU with 6GB+ VRAM)
+   - Consider using a smaller language model (tinyllama eg) if you have hardware constraints
+
+6. **File Processing Issues**:
+   - If uploaded documents aren't appearing in search results, check the embedder logs for processing errors
+   - Verify MinIO webhook notifications are correctly configured by checking the embedder logs for event receipts
+   - Ensure uploaded files are in supported formats (PDF, TXT)
+
 ### License
 
 This project is available under the [MIT License](https://github.com/daviaraujocc/rag-docs/blob/main/LICENSE).
@@ -307,8 +351,7 @@ This project is available under the [MIT License](https://github.com/daviaraujoc
 
 ### TODO
 
-- [ ] Add Helm charts for Kubernetes deployment
+- ~~[ ] Add Helm charts for Kubernetes deployment~~
 - [ ] Implement caching for faster responses
 - [ ] Add support for more document formats
-- [ ] Improve UI with more features
 - [ ] Implement metrics and monitoring
