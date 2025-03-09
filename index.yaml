@@ -1,0 +1,21 @@
+apiVersion: v1
+entries:
+  rag-docs:
+  - apiVersion: v2
+    appVersion: 0.1.2
+    created: "2025-03-09T01:26:23.75476266Z"
+    dependencies:
+    - alias: minio
+      condition: minio.enabled
+      name: minio
+      repository: https://charts.min.io/
+      version: 5.4.0
+    description: A Helm chart for RAG-DOCS - Chat with your documents using AI-powered
+      search
+    digest: 374ea7f1e2ca9b41d4941997ed6dafe45353663f0e2c5ebdc1d7fde094486482
+    name: rag-docs
+    type: application
+    urls:
+    - https://github.com/daviaraujocc/rag-docs/releases/download/rag-docs-0.1.2/rag-docs-0.1.2.tgz
+    version: 0.1.2
+generated: "2025-03-09T01:26:23.754771828Z"
