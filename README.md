@@ -177,6 +177,22 @@ docker-compose up -d --build
 
 3. Access the UI at [http://localhost:3000](http://localhost:3000)
 
+<details>
+<summary>Managing Ollama Models</summary>
+
+If you’re using local Ollama models, ensure the required model is available:
+
+To check available models: `curl http://localhost:11434/api/tags -s | jq .models[].name`
+
+Where `localhost:11434` is the Ollama service endpoint.
+
+To download a model:
+- Via API: `curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'`
+- Via UI: Go to System Status tab and click "Download Model"
+
+Note: This example uses llama3.1:8b which requires ~8GB VRAM. Consider smaller models for limited hardware.
+</details>
+
 #### Using OpenAI as an Alternative
 
 If you prefer using OpenAI instead of local Ollama models, follow these steps:
@@ -208,31 +224,6 @@ docker-compose -f docker-compose.openai.yaml up -d --build
 1. **Upload a Document**: Use the UI to upload your TXT or PDF file.
 2. **Start a Chat Session**: Initiate a chat to query the content of your document.
 3. **Ask Questions**: Interact with your document by asking questions.
-
-#### Managing Ollama Models
-
-If you’re using local Ollama models, ensure the required model is available:
-
-##### 1. Check Available Models
-
-```bash
-curl http://localhost:11434/api/tags -s | jq .models[].name
-```
-> Tip: The command uses jq for JSON parsing. If you don’t have it installed, please install it first.
-
-##### 2. Pull a Model if Needed
-
-- Via API:
-
-```bash
-curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'
-```
-
-- Via UI:
-   - Go to the System Status tab
-   - Click on "Download Model" button
-
-> In this example we are using llama3.1:8b model which requires around 8GB of VRAM. You can choose a smaller model if you have memory constraints.
 
 ### Kubernetes Deployment 
 
