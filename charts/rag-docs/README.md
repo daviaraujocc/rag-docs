@@ -17,6 +17,7 @@ helm repo add rag-docs https://daviaraujocc.github.io/rag-docs/
 helm repo update
 ```
 
+
 ### Install the chart
 
 ```bash
