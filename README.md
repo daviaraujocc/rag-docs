@@ -38,6 +38,8 @@ Chat with your documents using AI-powered search
 
 RAG-DOCS is a proof of concept document search engine that uses `RAG` (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context from uploaded documents.
 
+In this demo i've used a fake company document called "nexustech" that contains information about the company (hr policies, api documentation), and the system is able to retrieve information from the document and generate responses based on the context.
+
 At the moment RAG-DOCS uses `all-MiniLM-L6-v2` model from Ollama as default for embedding, which requires at least 2GB of RAM, with a reasonable performance, but still not that accurate if compared to OpenAI models. The similarity threshold is set to 0.25 as default because of it, but you can change it as you wish.
 
 ### Features
