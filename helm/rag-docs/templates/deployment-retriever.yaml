@@ -1,0 +1,80 @@
+{{- if .Values.retriever.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.retriever.name }}
+  labels:
+    {{- include "rag-docs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: retriever
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.retriever.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rag-docs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: retriever
+  template:
+    metadata:
+      labels:
+        {{- include "rag-docs.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: retriever
+      {{- with .Values.retriever.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.retriever.podSecurityContext | nindent 8 }}
+      containers:
+        - name: retriever
+          securityContext:
+            {{- toYaml .Values.retriever.securityContext | nindent 12 }}
+          image: "{{ .Values.retriever.image.repository }}:{{ .Values.retriever.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.retriever.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 6000
+              protocol: TCP
+          env:
+            {{- include "rag-docs.postgresEnv" . | nindent 12 }}
+            {{- range $key, $value := .Values.retriever.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.retriever.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

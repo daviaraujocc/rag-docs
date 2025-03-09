@@ -1,0 +1,17 @@
+{{- if .Values.postgres.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-postgres-init
+  labels:
+    {{- include "rag-docs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+data:
+  {{- range $key, $val := .Values.postgres.initdbScripts }}
+  {{ $key }}: |
+{{ $val | indent 4 }}
+  {{- end }}
+{{- end }}

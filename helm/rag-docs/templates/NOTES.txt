@@ -1,0 +1,21 @@
+RAG-DOCS has been deployed to your cluster.
+
+{{- if .Values.ingress.enabled }}
+You can access the application at:
+{{- range .Values.ingress.hosts }}
+  - http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- else }}
+To access the UI service, run:
+
+  kubectl port-forward svc/{{ .Release.Name }}-ui {{ .Values.ui.service.port }}:{{ .Values.ui.service.port }}
+
+Then access the application at: http://localhost:{{ .Values.ui.service.port }}
+{{- end }}
+
+Default credentials:
+  - Username: {{ .Values.minio.rootUser }}
+  - Password: {{ .Values.minio.rootPassword }}
+
+For more information about the application, please refer to the README at:
+https://github.com/daviaraujocc/rag-docs/blob/main/README.md

@@ -1,0 +1,81 @@
+{{- if .Values.embedder.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-{{ .Values.embedder.name }}
+  labels:
+    {{- include "rag-docs.labels" . | nindent 4 }}
+    app.kubernetes.io/component: embedder
+    {{- with .Values.commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.commonAnnotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.embedder.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rag-docs.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: embedder
+  template:
+    metadata:
+      labels:
+        {{- include "rag-docs.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: embedder
+      {{- with .Values.embedder.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.embedder.podSecurityContext | nindent 8 }}
+      containers:
+        - name: embedder
+          securityContext:
+            {{- toYaml .Values.embedder.securityContext | nindent 12 }}
+          image: "{{ .Values.embedder.image.repository }}:{{ .Values.embedder.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.embedder.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 5000
+              protocol: TCP
+          env:
+            {{- include "rag-docs.postgresEnv" . | nindent 12 }}
+            {{- include "rag-docs.minioEnv" . | nindent 12 }}
+            {{- range $key, $value := .Values.embedder.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.embedder.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
