@@ -182,7 +182,7 @@ ui:
    environment:
       LLM_PROVIDER: "openai"
       OPENAI_API_BASE: "https://api.openai.com/v1/"
-      OPENAI_API_KEY: "your-api-key # change here
+      OPENAI_API_KEY: "your-api-key" # change here
 ```
 
 
@@ -202,8 +202,7 @@ ui:
 If using OLLAMA local models, before starting a chat session, you need to make sure that the model is available in the Ollama service. You can check the available models by running this command:
 
 ```bash
-curl http://localhost:11434/api/tags -s 
-| jq .models[].name
+curl http://localhost:11434/api/tags -s | jq .models[].name
 ```
 
 If you don't see the model you want to use, you have to pull it, and there's two options.
@@ -221,11 +220,11 @@ curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'
 
 > In this example we are using llama3.1:8b model which requires around 8GB of VRAM. You can choose a smaller model if you have memory constraints.
 
-### 🚧 Kubernetes Deployment (WIP) 🚧
+### Kubernetes Deployment 
 
-Deployment with helm charts soon.
+For Kubernetes deployment, check the [documentation](helm/rag-docs/README.md).
 
-helm install rag-docs helm/rag-docs
+You can use values present in `helm/rag-docs` for your deployment.
 
 ### Environment Variables
 
