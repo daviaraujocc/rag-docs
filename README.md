@@ -227,10 +227,6 @@ docker-compose -f docker-compose.openai.yaml up -d --build
 
 ### Kubernetes Deployment 
 
-For Kubernetes deployment, check the [documentation](charts/rag-docs/README.md).
-
-You can use values present in `helm` for your deployment.
-
 For deploying on Kubernetes:
 - Refer to the [Kubernetes Deployment Guide](charts/rag-docs/README.md) using Helm for detailed instructions.
 - Customize your deployment using the values provided in the helm directory.
