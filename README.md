@@ -222,9 +222,9 @@ curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.1:8b"}'
 
 ### Kubernetes Deployment 
 
-For Kubernetes deployment, check the [documentation](helm/rag-docs/README.md).
+For Kubernetes deployment, check the [documentation](charts/rag-docs/README.md).
 
-You can use values present in `helm/rag-docs` for your deployment.
+You can use values present in `helm` for your deployment.
 
 ### Environment Variables
 
