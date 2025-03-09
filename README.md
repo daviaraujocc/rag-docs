@@ -36,7 +36,9 @@ Chat with your documents using AI-powered search
 <img src="assets/images/rag-docs.gif" alt="demo">
 </div>
 
-RAG-DOCS is a document search engine that uses RAG (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context. 
+RAG-DOCS is a proof of concept document search engine that uses `RAG` (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context from uploaded documents.
+
+At the moment RAG-DOCS uses `all-MiniLM-L6-v2` model from Ollama as default for embedding, which requires at least 2GB of RAM, with a reasonable performance, but still not that accurate if compared to OpenAI models. The similarity threshold is set to 0.25 as default because of it, but you can change it as you wish.
 
 ### Features
 
@@ -120,7 +122,7 @@ flowchart TD
 2. **Document Processing**:
    - New documents are uploaded to MinIO storage
    - MinIO sends webhook notifications to the Embedder service
-   - Embedder creates vector embeddings and stores them in the Postgres database
+   - Embedder creates vector embeddings and stores them in the Postgres vector database
 
 3. **Query Processing**:
    - UI sends queries to the Retriever service when chat is initiated
@@ -146,7 +148,7 @@ flowchart TD
 
 - Minimum:
    - 2 CPU
-   - 4 GB RAM
+   - 6~12 GB RAM
 
 - Recommended:
    - A GPU with >6GB VRAM for better performance
@@ -230,6 +232,10 @@ docker-compose -f docker-compose.openai.yaml up -d --build
 For deploying on Kubernetes:
 - Refer to the [Kubernetes Deployment Guide](charts/rag-docs/README.md) using Helm for detailed instructions.
 - Customize your deployment using the values provided in the helm directory.
+
+###  🚧 Monitoring - WIP 🚧
+
+Monitoring with prometheus and grafana soon.
 
 ### Environment Variables
 
