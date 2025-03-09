@@ -1,0 +1,31 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rag-docs-embedder-monitor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: embedder
+  endpoints:
+    - port: http  
+      path: /metrics
+      interval: 30s
+  namespaceSelector:
+    matchNames:
+      - default
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rag-docs-retriever-monitor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: retriever
+  endpoints:
+    - port: http  
+      path: /metrics
+      interval: 30s
+  namespaceSelector:
+    matchNames:
+      - default    

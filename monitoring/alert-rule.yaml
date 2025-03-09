@@ -1,0 +1,99 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata: 
+  name: rag-docs-rule
+  namespace: monitoring
+  labels:
+    prometheus: k8s 
+    role: alert-rules 
+    app.kubernetes.io/name: kube-prometheus 
+    app.kubernetes.io/part-of: kube-prometheus 
+spec: 
+  groups: 
+  - name: rag-docs-rule 
+    rules: 
+    - alert: RagDocsDown 
+      expr: up{job="rag-docs"} == 0 
+      for: 30s 
+      labels: 
+        severity: critical 
+      annotations:
+        summary: "Rag-Docs service is down" 
+        description: "Rag-Docs is down for more than 30 seconds. Pod name: {{ $labels.pod }}" 
+
+    - alert: HighRequestRate 
+      expr: rate(process_cpu_seconds_total [30s]) > 30 
+      for: 30s 
+      labels: 
+        severity: warning 
+      annotations: 
+        summary: "RagDocs is receiving high request rate"
+        description: "RagDocs is receiving high request rate for more than 30 seconds. Pod name: {{ $labels.pod }}"
+    
+    - alert: HighSearchErrorRate
+      expr: rate(search_errors_total[5m]) / rate(search_requests_total[5m]) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+        service: retriever
+      annotations:
+        summary: "High search error rate"
+        description: "Search error rate is above 5% for more than 2 minutes. Pod: {{ $labels.pod }}"
+
+    - alert: SlowSearchResponses
+      expr: histogram_quantile(0.95, rate(search_duration_seconds_bucket[5m])) > 1
+      for: 2m
+      labels:
+        severity: warning
+        service: retriever
+      annotations:
+        summary: "Slow search responses"
+        description: "95th percentile of search response times is above 1 second for more than 2 minutes. Pod: {{ $labels.pod }}"
+
+    - alert: HighFileProcessingErrorRate
+      expr: rate(files_error_total[5m]) / (rate(files_processed_total[5m]) + rate(files_error_total[5m])) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+        service: embedder
+      annotations:
+        summary: "High file processing error rate"
+        description: "File processing error rate is above 5% for more than 2 minutes. Pod: {{ $labels.pod }}"
+
+    - alert: SlowFileProcessing
+      expr: histogram_quantile(0.95, rate(file_processing_duration_seconds_bucket[5m])) > 30
+      for: 2m
+      labels:
+        severity: warning
+        service: embedder
+      annotations:
+        summary: "Slow file processing"
+        description: "95th percentile of file processing times is above 30 seconds for more than 2 minutes. Pod: {{ $labels.pod }}, File type: {{ $labels.file_type }}"
+
+    - alert: SlowEmbeddingOperations
+      expr: histogram_quantile(0.95, rate(embedding_duration_seconds_bucket[5m])) > 10
+      for: 2m
+      labels:
+        severity: warning
+        service: embedder
+      annotations:
+        summary: "Slow embedding operations"
+        description: "95th percentile of embedding operations is above 10 seconds for more than 2 minutes. Pod: {{ $labels.pod }}"
+
+    - alert: HighLatencyEndpoints
+      expr: histogram_quantile(0.95, sum(rate(request_duration_seconds_bucket[5m])) by (endpoint)) > 2
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Endpoint with high latency"
+        description: "95th percentile of request duration for endpoint {{ $labels.endpoint }} is above 2 seconds for more than 2 minutes"
+
+    - alert: ManyEndpointErrors
+      expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) by (endpoint) / sum(rate(http_requests_total[5m])) by (endpoint)) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Many errors on endpoint"
+        description: "Error rate for endpoint {{ $labels.endpoint }} is above 5% for more than 2 minutes"
