@@ -165,11 +165,12 @@ flowchart TD
 
 - Minimum:
    - 2 CPU
-   - 6~12 GB RAM
+   - 4~8 GB RAM 
 
 - Recommended:
    - A GPU with >6GB VRAM for better performance
 
+> Requirements will depend most if you are using a local model (Ollama) or OpenAI API, if using local models GPU is highly recommended.
 
 ### Pre-requisites
 
