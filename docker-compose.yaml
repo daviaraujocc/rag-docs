@@ -113,8 +113,8 @@ services:
      /usr/bin/mc mb myminio/documents || echo 'Bucket may already exist'
      # Add event notification for the bucket
      echo 'Setting up event notification for documents bucket...'
-     /usr/bin/mc event add myminio/documents arn:minio:sqs::EMBEDDER:webhook --event put --suffix .pdf
-     /usr/bin/mc event add myminio/documents arn:minio:sqs::EMBEDDER:webhook --event put --suffix .txt
+     /usr/bin/mc event add -p myminio/documents arn:minio:sqs::EMBEDDER:webhook --event put --suffix .pdf
+     /usr/bin/mc event add -p myminio/documents arn:minio:sqs::EMBEDDER:webhook --event put --suffix .txt
      "
    networks:
      - rag-network
