@@ -2,8 +2,8 @@ apiVersion: v2
 name: rag-docs
 description: A Helm chart for RAG-DOCS - Chat with your documents using AI-powered search
 type: application
-version: 0.1.1
-appVersion: "0.1.0"
+version: 0.1.2
+appVersion: "0.1.2"
 dependencies:
   - name: minio
     alias: minio
