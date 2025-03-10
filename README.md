@@ -60,7 +60,7 @@ The architecture consists of four core microservices:
 - **Embedder Service**: Processes documents to generate vector embeddings and store at PostgresSQL vector database
 - **LLM Service**: Provides AI-generated completions using Ollama or OpenAI language models
 
-Thi implementation aim for microservices architecture and uses FastAPI for the backend services (retriever/embedder), Gradio for the front-end interface, MinIO for document storage, PostgreSQL with pgvector for vector storage and search, and supports both Ollama (local) and OpenAI (cloud) LLMs for generating responses. For a detailed workflow explanation, see the [How it works?](#how-it-works-) section.
+This implementation aim for microservices architecture for high scalability and uses FastAPI for the backend services (retriever/embedder), Gradio for the front-end interface, MinIO for document storage, PostgreSQL with pgvector for vector storage and search, and supports both Ollama (local) and OpenAI (cloud) LLMs for generating responses. For a detailed workflow explanation, see the [How it works?](#how-it-works-) section.
 
 The repository includes a demo data about a fictional company "NexusTech" with sample HR policies and API documentation, showcasing the system's ability to extract and synthesize information across multiple document types.
 
