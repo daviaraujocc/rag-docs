@@ -54,10 +54,11 @@ Chat with your documents using AI-powered search
 
 RAG-DOCS is a proof of concept document search engine that uses `RAG` (Retrieval Augmented Generation) architecture to deliver query completions, the system enables users to upload documents, perform semantic searches, and receive AI-generated responses based on relevant context extracted from the uploaded documents.
 
-The architecture consists of three core microservices:
+The architecture consists of four core microservices:
 - **UI Service**: Intuitive interface for document management and chatting interactions
 - **Retriever Service**: Executes vector similarity searches to identify relevant document sections based on user queries
 - **Embedder Service**: Processes documents to generate vector embeddings and store at PostgresSQL vector database
+- **LLM Service**: Provides AI-generated completions using Ollama or OpenAI language models
 
 Thi implementation aim for microservices architecture and uses FastAPI for the backend services (retriever/embedder), Gradio for the front-end interface, MinIO for document storage, PostgreSQL with pgvector for vector storage and search, and supports both Ollama (local) and OpenAI (cloud) LLMs for generating responses. For a detailed workflow explanation, see the [How it works?](#how-it-works-) section.
 
