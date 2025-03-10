@@ -39,8 +39,9 @@ Chat with your documents using AI-powered search
   - [OpenAI Configuration (Alternative)](#openai-configuration-alternative)
   - [PostgreSQL Service](#postgresql-service)
   - [MinIO Service](#minio-service)
-- [Troubleshooting and FAQs](#troubleshooting-and-faqs)
+- [Service Interfaces](#service-interfaces)
 - [Screenshots](#screenshots)
+- [Troubleshooting and FAQs](#troubleshooting-and-faqs)
 - [License](#license)
 
 </details>
@@ -51,11 +52,18 @@ Chat with your documents using AI-powered search
 <img src="assets/images/rag-docs.gif" alt="demo">
 </div>
 
-RAG-DOCS is a proof of concept document search engine that uses `RAG` (Retrieval Augmented Generation) architecture to provide completions for your queries. The system allows users to upload documents, search for relevant information, and generate responses based on the retrieved context from uploaded documents.
+RAG-DOCS is a proof of concept document search engine that uses `RAG` (Retrieval Augmented Generation) architecture to deliver query completions, the system enables users to upload documents, perform semantic searches, and receive AI-generated responses based on relevant context extracted from the uploaded documents.
 
-In this demo i've used a fake company document called "nexustech" that contains information about the company (hr policies, api documentation), and the system is able to retrieve information from the document and generate responses based on the context.
+The architecture consists of three core microservices:
+- **UI Service**: Intuitive interface for document management and chatting interactions
+- **Retriever Service**: Executes vector similarity searches to identify relevant document sections based on user queries
+- **Embedder Service**: Processes documents to generate vector embeddings and store at PostgresSQL vector database
 
-At the moment RAG-DOCS uses `all-MiniLM-L6-v2` model from Ollama as default for embedding, which requires at least 2GB of RAM, with a reasonable performance, but still not that accurate if compared to OpenAI models. The similarity threshold is set to 0.25 as default because of it, but you can change it as you wish.
+Thi implementation aim for microservices architecture and uses FastAPI for the backend services (retriever/embedder), Gradio for the front-end interface, MinIO for document storage, PostgreSQL with pgvector for vector storage and search, and supports both Ollama (local) and OpenAI (cloud) LLMs for generating responses. For a detailed workflow explanation, see the [How it works?](#how-it-works-) section.
+
+The repository includes a demo data about a fictional company "NexusTech" with sample HR policies and API documentation, showcasing the system's ability to extract and synthesize information across multiple document types.
+
+By default RAG-DOCS utilizes the `all-MiniLM-L6-v2` embedding model from Ollama, which offers a good balance of performance and resource efficiency (requiring only 2GB RAM), while this model provides reasonable performance, it may be less precise than OpenAI's embedding models eg, which is why the default similarity threshold is set to 0.25. This threshold can be adjusted through environment variables to fine-tune retrieval precision.
 
 ### Features
 
@@ -131,13 +139,13 @@ flowchart TD
     class Ollama service
 ```
 
-### Communication Flow
+### How it works ?
 
-1. **User Interaction**:
+1. **Interface (UI)**:
    - Users interact with the system through the UI service (Gradio)
 
 2. **Document Processing**:
-   - New documents are uploaded to MinIO storage
+   - New documents are uploaded to MinIO storage via the UI
    - MinIO sends webhook notifications to the Embedder service
    - Embedder creates vector embeddings and stores them in the Postgres vector database
 
@@ -147,16 +155,7 @@ flowchart TD
    - UI sends prompts to Ollama LLM along with retrieved context
    - Ollama returns generated responses to the UI
 
-### Service Interfaces
 
-| Service | Interface Port |
-|---------|---------------|
-| UI Service | 3000 |
-| Retriever Service | 6000 |
-| Embedder Service | 5000 |
-| Postgres | 5432 |
-| MinIO | 9000, 9001 |
-| Ollama LLM | 11434 |
 
 
 ## Getting Started
@@ -320,6 +319,17 @@ Below are the environment variables for each service that can be modified to cus
 | `MINIO_ROOT_PASSWORD` | MinIO root password | `minioadmin` |
 | `MINIO_NOTIFY_WEBHOOK_ENABLE_EMBEDDER` | Enable webhook for Embedder | `on` |
 | `MINIO_NOTIFY_WEBHOOK_ENDPOINT_EMBEDDER` | Webhook endpoint URL | `http://embedder:5000/minio-event` |
+
+### Service Interfaces
+
+| Service | Interface Port |
+|---------|---------------|
+| UI Service | 3000 |
+| Retriever Service | 6000 |
+| Embedder Service | 5000 |
+| Postgres | 5432 |
+| MinIO | 9000, 9001 |
+| Ollama LLM | 11434 |
 
 ### Screenshots
 
